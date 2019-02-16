@@ -74,8 +74,11 @@ func getToken(token string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if err = ioutil.WriteFile(cfgfile, input, 0644); err != nil {
+		err = ioutil.WriteFile(cfgfile, input, 0644)
+		if err != nil {
 			return "", err
+		} else {
+			os.Remove(cfgfiletemplate)
 		}
 	}
 	cfg, err := ioutil.ReadFile(cfgfile)
