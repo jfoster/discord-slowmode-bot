@@ -4,7 +4,10 @@ BINARY=discord-set-slowmode-bot
 VERSION=$(shell git describe --tags --always)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-release=mkdir ${BINARY}-${VERSION}-$(1)-$(2); cp cfg.yaml.template ${BINARY}-${VERSION}-$(1)-$(2)/cfg.yaml.template; GOOS=$(1) GOARCH=$(2) go build ${LDFLAGS} -o ${BINARY}-${VERSION}-$(1)-$(2)/${BINARY}-${VERSION}-$(1)-$(2)$(3); zip -r ${BINARY}-${VERSION}-$(1)-$(2).zip ${BINARY}-${VERSION}-$(1)-$(2) -i '*$(1)*' 'cfg.yaml.template' 
+release=mkdir ${BINARY}-${VERSION}-$(1)-$(2);\
+cp cfg.yaml.template ${BINARY}-${VERSION}-$(1)-$(2)/cfg.yaml.template;\
+GOOS=$(1) GOARCH=$(2) go build ${LDFLAGS} -o ${BINARY}-${VERSION}-$(1)-$(2)/${BINARY}$(3);\
+zip -r ${BINARY}-${VERSION}-$(1)-$(2).zip ${BINARY}-${VERSION}-$(1)-$(2) -i '*$(1)*' 'cfg.yaml.template'
 
 test:
 	go test -v
