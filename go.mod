@@ -1,4 +1,4 @@
-module github.com/jfoster/discordtestbot
+module github.com/jfoster/discord-set-slowmode-bot
 
 require (
 	github.com/andersfylling/disgord v0.8.2
