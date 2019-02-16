@@ -86,9 +86,9 @@ func getToken(token string) (string, error) {
 		if err != nil {
 			return "", err
 		} else {
-			ret, err := yaml.Get("bot").Get("token").String()
-			if ret == "" {
-				return "", errors.New("client id is empty, check " + cfgfile + " file")
+			ret, err := yaml.Get("token").String()
+			if ret == "" || ret == "<your-bot-token-here>" {
+				return "", errors.New("client id is not specified, check " + cfgfile + " file")
 			}
 			if err != nil {
 				return "", err
