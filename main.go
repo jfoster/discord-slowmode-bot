@@ -124,6 +124,7 @@ func runBot(token string) error {
 	}
 	clientID := me.ID.String()
 	if len(clientID) > 0 {
+		logrus.Info("Link to add the bot to your server:")
 		logrus.Info("https://discordapp.com/oauth2/authorize?scope=bot&permissions=16&client_id=" + clientID)
 	}
 
