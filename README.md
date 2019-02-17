@@ -14,11 +14,11 @@ Currently the GUI for setting slowmode is not particularly granular and does not
 
 ![](https://my.mixtape.moe/rcpisa.png)
 
-I then discovered it's possible to set slowmode to any integer between 0 and 120 seconds, hence the creation of this simple bot.
+I then discovered it's possible to set slowmode to any integer between 0 and 120 seconds via the discord api, hence the creation of this simple bot.
 
 ## How?
 
-1. Create a discord bot app, [instructions here](https://twentysix26.github.io/Red-Docs/red_guide_bot_accounts/#creating-a-new-bot-account).
+1. Create a discord bot app, [instructions here](https://github.com/andersfylling/disgord/wiki/Get-bot-token-and-add-it-to-a-server).
 1. Download the [latest release](https://github.com/jfoster/discord-set-slowmode-bot/releases/latest) for your given platform.
 1. Open a command line instance in the bot's directory and run ```./discord-set-slowmode-bot```, a warning should be printed ```client id is not specified, check cfg.yaml file``` and cfg.yaml will be created.
 1. Copy your bot token into cfg.yaml replacing ```<your-bot-token-here>```.
