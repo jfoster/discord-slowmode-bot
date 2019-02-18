@@ -103,8 +103,8 @@ func getToken(token string) (string, error) {
 
 func runBot(token string) error {
 	logrus.Info("Creating Discord session")
-	bot, err := disgord.NewSession(&disgord.Config{
-		Token: token,
+	bot, err := disgord.NewClient(&disgord.Config{
+		BotToken: token,
 	})
 	if err != nil {
 		return err
