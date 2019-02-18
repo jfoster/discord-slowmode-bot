@@ -192,19 +192,24 @@ func onMessageCreate(session disgord.Session, data *disgord.MessageCreate) {
 	}
 
 	ratelimit := contents[1]
-	u, err := strconv.ParseUint(ratelimit, 10, 0)
-	if err != nil {
-		logrus.Error(err)
+	if ratelimit == "?" {
+		message.RespondString(session, "slowmode is set to "+strconv.FormatUint(uint64(channel.RateLimitPerUser), 10)+" seconds")
 	} else {
+		u, err := strconv.ParseUint(ratelimit, 10, 0)
+		if err != nil {
+			logrus.Error(err)
+			return
+		}
 		params := disgord.NewModifyTextChannelParams()
 		if err := params.SetRateLimitPerUser(uint(u)); err != nil {
 			logrus.Error(err)
+			return
 		}
-		_, err := session.ModifyChannel(channel.ID, params)
+		_, err = session.ModifyChannel(channel.ID, params)
 		if err != nil {
 			logrus.Error(err)
-		} else {
-			message.RespondString(session, "slowmode set to "+ratelimit+" seconds")
+			return
 		}
+		message.RespondString(session, "slowmode set to "+ratelimit+" seconds")
 	}
 }
