@@ -187,7 +187,9 @@ func onMessageCreate(session disgord.Session, data *disgord.MessageCreate) {
 			break
 		}
 	}
-
+	if guild.OwnerID == member.User.ID {
+		isPermitted = true
+	}
 	if !isPermitted {
 		logr.Infof("%s#%s (%s) is not permitted!", member.User.Username, member.User.Discriminator.String(), member.Nick)
 		return
