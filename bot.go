@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/andersfylling/disgord"
+	"github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/sirupsen/logrus"
 	"github.com/smallfish/simpleyaml"
 	"github.com/urfave/cli"
@@ -20,13 +22,24 @@ const (
 )
 
 var (
+	logr    = logrus.New()
 	version = "## filled by go build ##"
-	err     error
 )
+
+func init() {
+	logr.SetFormatter(&runtime.Formatter{
+		ChildFormatter: &logrus.TextFormatter{
+			ForceColors: true,
+		},
+		Line:    true,
+		Package: true,
+		File:    true,
+	})
+}
 
 func main() {
 	if err := cliApp(); err != nil {
-		logrus.Fatal(err)
+		logr.Fatal(err)
 	}
 }
 
@@ -59,7 +72,7 @@ func cliApp() error {
 		return nil
 	}
 
-	if err = app.Run(os.Args); err != nil {
+	if err := app.Run(os.Args); err != nil {
 		return err
 	}
 	return nil
@@ -102,7 +115,7 @@ func getToken(token string) (string, error) {
 }
 
 func runBot(token string) error {
-	logrus.Info("Creating Discord session")
+	logr.Info("Creating Discord session")
 	bot, err := disgord.NewSession(&disgord.Config{
 		Token: token,
 	})
@@ -111,15 +124,14 @@ func runBot(token string) error {
 	}
 	bot.On(disgord.EventMessageCreate, onMessageCreate)
 
-	logrus.Info("Discord session created successfully")
-	logrus.Info("Starting bot")
+	logr.Info("Discord session created successfully")
+	logr.Info("Starting bot")
 
 	start := time.Now()
 	if err = bot.Connect(); err != nil {
 		return err
 	}
-	elapsed := time.Since(start)
-	logrus.Info("Connection took ", elapsed)
+	logr.Info("Connection took ", time.Since(start))
 
 	me, err := bot.Myself()
 	if err != nil {
@@ -127,8 +139,7 @@ func runBot(token string) error {
 	}
 	clientID := me.ID.String()
 	if len(clientID) > 0 {
-		logrus.Info("Link to add the bot to your server:")
-		logrus.Info("https://discordapp.com/oauth2/authorize?scope=bot&permissions=16&client_id=" + clientID)
+		logr.Infof("Link to add the bot to your server: https://discordapp.com/oauth2/authorize?scope=bot&permissions=16&client_id=%s", clientID)
 	}
 
 	bot.DisconnectOnInterrupt()
@@ -144,37 +155,33 @@ func onMessageCreate(session disgord.Session, data *disgord.MessageCreate) {
 
 	me, err := session.Myself()
 	if err != nil {
-		logrus.Error(err)
+		logr.Error(err)
 	}
 
 	if message.Mentions[0].ID != me.ID {
 		return
 	}
 
-	channel, err := disgord.GetChannel(session.Req(), message.ChannelID)
+	channel, err := session.GetChannel(message.ChannelID)
 	if err != nil {
-		logrus.Error(err)
+		logr.Error(err)
 	}
 
 	guild, err := session.GetGuild(channel.GuildID)
 	if err != nil {
-		logrus.Error(err)
+		logr.Error(err)
 	}
 
 	member, err := session.GetGuildMember(guild.ID, message.Author.ID)
 	if err != nil {
-		logrus.Error(err)
-	}
-
-	if len(member.Roles) == 0 {
-		return
+		logr.Error(err)
 	}
 
 	isPermitted := false
 	for _, roleID := range member.Roles {
 		role, err := guild.Role(roleID)
 		if err != nil {
-			logrus.Error(err)
+			logr.Error(err)
 		} else if (role.Permissions & (disgord.AdministratorPermission | disgord.ManageChannelsPermission)) != 0 {
 			isPermitted = true
 			break
@@ -182,7 +189,7 @@ func onMessageCreate(session disgord.Session, data *disgord.MessageCreate) {
 	}
 
 	if !isPermitted {
-		logrus.Info(member.User.Username + "#" + member.User.Discriminator.String() + " (" + member.Nick + ") is not permitted!")
+		logr.Infof("%s#%s (%s) is not permitted!", member.User.Username, member.User.Discriminator.String(), member.Nick)
 		return
 	}
 
@@ -193,23 +200,23 @@ func onMessageCreate(session disgord.Session, data *disgord.MessageCreate) {
 
 	ratelimit := contents[1]
 	if ratelimit == "?" {
-		message.RespondString(session, "slowmode is set to "+strconv.FormatUint(uint64(channel.RateLimitPerUser), 10)+" seconds")
+		message.RespondString(session, fmt.Sprintf("slowmode is set to %s seconds", strconv.FormatUint(uint64(channel.RateLimitPerUser), 10)))
 	} else {
 		u, err := strconv.ParseUint(ratelimit, 10, 0)
 		if err != nil {
-			logrus.Error(err)
+			logr.Error(err)
 			return
 		}
 		params := disgord.NewModifyTextChannelParams()
 		if err := params.SetRateLimitPerUser(uint(u)); err != nil {
-			logrus.Error(err)
+			logr.Error(err)
 			return
 		}
 		_, err = session.ModifyChannel(channel.ID, params)
 		if err != nil {
-			logrus.Error(err)
+			logr.Error(err)
 			return
 		}
-		message.RespondString(session, "slowmode set to "+ratelimit+" seconds")
+		message.RespondString(session, fmt.Sprintf("slowmode set to %s seconds", ratelimit))
 	}
 }

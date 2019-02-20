@@ -7,6 +7,8 @@ github.com/andersfylling/disgord v0.8.8 h1:V7y/mDzXX/yoUo8hedDezDuwy6h8HHpveeMoN
 github.com/andersfylling/disgord v0.8.8/go.mod h1:mAOoDflyxwzruGKWr8cBupA638+gJCRtkFItLh2dghk=
 github.com/andersfylling/snowflake/v2 v2.0.3 h1:WOec/s+f/R/pdMpDpIlqpFJJp/nesjeEDaDBWGju6ho=
 github.com/andersfylling/snowflake/v2 v2.0.3/go.mod h1:wLp/WvxTxBFlRhpyH/JGw+tVLsWsEuV7/AgJB9PirBc=
+github.com/banzaicloud/logrus-runtime-formatter v0.0.0-20180617171254-12df4a18567f h1:WeGZeO6I+lI1IG2vm1iXTeMrHLcMUjfoYm+rubBM5c4=
+github.com/banzaicloud/logrus-runtime-formatter v0.0.0-20180617171254-12df4a18567f/go.mod h1:2GxaTh0YYmhQEMQ4wJ8Izr7sBecWZtnXlDzybR1hSO8=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwoZc+/fpc=
