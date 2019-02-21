@@ -24,19 +24,25 @@ const (
 )
 
 var (
-	logr    = logrus.New()
+	cfg  = new(simpleyaml.Yaml)
+	logr = logrus.New()
+
 	version = "## filled by go build ##"
 )
 
 func init() {
-	logr.SetFormatter(&runtime.Formatter{
-		ChildFormatter: &logrus.TextFormatter{
-			ForceColors: true,
-		},
-		Line:    true,
-		Package: true,
-		File:    true,
-	})
+	cfg, _ = getCfg()
+	debug, _ := cfg.Get("debug").Bool()
+	if debug {
+		logr.SetFormatter(&runtime.Formatter{
+			ChildFormatter: &logrus.TextFormatter{
+				ForceColors: true,
+			},
+			Line:    true,
+			Package: true,
+			File:    true,
+		})
+	}
 }
 
 func main() {
@@ -80,40 +86,48 @@ func cliApp() error {
 	return nil
 }
 
-func getToken(token string) (string, error) {
-	if token != "" {
-		return token, nil
-	}
+func getCfg() (*simpleyaml.Yaml, error) {
+	yaml := new(simpleyaml.Yaml)
+
 	if _, err := os.Stat(cfgfile); os.IsNotExist(err) {
 		input, err := ioutil.ReadFile(cfgfiletemplate)
 		if err != nil {
-			return "", err
+			return yaml, err
 		}
 		err = ioutil.WriteFile(cfgfile, input, 0644)
 		if err != nil {
-			return "", err
+			return yaml, err
 		} else {
 			os.Remove(cfgfiletemplate)
 		}
 	}
-	cfg, err := ioutil.ReadFile(cfgfile)
+
+	file, err := ioutil.ReadFile(cfgfile)
+	if err != nil {
+		return yaml, err
+	}
+
+	yaml, err = simpleyaml.NewYaml(file)
+	if err != nil {
+		return yaml, err
+	}
+	return yaml, nil
+}
+
+func getToken(token string) (string, error) {
+	if token != "" {
+		return token, nil
+	}
+
+	t, err := cfg.Get("token").String()
 	if err != nil {
 		return "", err
-	} else {
-		yaml, err := simpleyaml.NewYaml(cfg)
-		if err != nil {
-			return "", err
-		} else {
-			ret, err := yaml.Get("token").String()
-			if ret == "" || ret == "<your-bot-token-here>" {
-				return "", errors.New("client id is not specified, check " + cfgfile + " file")
-			}
-			if err != nil {
-				return "", err
-			}
-			return ret, nil
-		}
 	}
+
+	if t == "" || t == "<your-bot-token-here>" {
+		return "", errors.New("client id is not specified, check " + cfgfile + " file")
+	}
+	return t, nil
 }
 
 func runBot(token string) error {
