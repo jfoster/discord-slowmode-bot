@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/andersfylling/disgord"
+	"github.com/andersfylling/disgord/event"
+	"github.com/andersfylling/disgord/std"
 	"github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/sirupsen/logrus"
 	"github.com/smallfish/simpleyaml"
@@ -116,13 +118,21 @@ func getToken(token string) (string, error) {
 
 func runBot(token string) error {
 	logr.Info("Creating Discord session")
-	bot, err := disgord.NewSession(&disgord.Config{
-		Token: token,
+
+	bot := disgord.New(&disgord.Config{
+		BotToken: token,
+		Logger:   logr,
 	})
+
+	filter, err := std.NewMsgFilter(bot)
 	if err != nil {
 		return err
 	}
-	bot.On(disgord.EventMessageCreate, onMessageCreate)
+
+	err = bot.On(event.MessageCreate, filter.HasBotMentionPrefix, onMessageCreate)
+	if err != nil {
+		return err
+	}
 
 	logr.Info("Discord session created successfully")
 	logr.Info("Starting bot")
@@ -133,14 +143,12 @@ func runBot(token string) error {
 	}
 	logr.Info("Connection took ", time.Since(start))
 
-	me, err := bot.Myself()
+	bot.AddPermission(disgord.ManageChannelsPermission)
+	url, err := bot.CreateBotURL()
 	if err != nil {
 		return err
 	}
-	clientID := me.ID.String()
-	if len(clientID) > 0 {
-		logr.Infof("Link to add the bot to your server: https://discordapp.com/oauth2/authorize?scope=bot&permissions=16&client_id=%s", clientID)
-	}
+	logr.Infof("Link to add the bot to your server: %s", url)
 
 	bot.DisconnectOnInterrupt()
 	return nil
@@ -148,19 +156,6 @@ func runBot(token string) error {
 
 func onMessageCreate(session disgord.Session, data *disgord.MessageCreate) {
 	message := data.Message
-
-	if len(message.Mentions) == 0 {
-		return
-	}
-
-	me, err := session.Myself()
-	if err != nil {
-		logr.Error(err)
-	}
-
-	if message.Mentions[0].ID != me.ID {
-		return
-	}
 
 	channel, err := session.GetChannel(message.ChannelID)
 	if err != nil {
