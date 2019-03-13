@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	// Default = Build
+	Default = Run
 
 	VERSION string
 	LDFLAGS string
@@ -39,7 +39,7 @@ type target struct {
 
 func init() {
 	VERSION, _ = sh.Output("git", "describe", "--tags", "--always", "--dirty")
-	LDFLAGS = fmt.Sprintf("'-X main.version=%s'", VERSION)
+	LDFLAGS = fmt.Sprintf("-X main.version=%s", VERSION)
 
 	if _, err := os.Stat("vendor"); !os.IsNotExist(err) {
 		GOFLAGS = "-mod=vendor"
@@ -53,7 +53,7 @@ func Run() error {
 func Build() error {
 	mg.Deps(Clean)
 
-	_, err := build(target{runtime.GOOS, runtime.GOARCH}, ".")
+	_, err := build(target{runtime.GOOS, runtime.GOARCH}, ".", false)
 	return err
 }
 
@@ -70,7 +70,7 @@ func Release() error {
 
 	for _, t := range targets {
 		logr.Infof("Building for OS %s and architecture %s\n", t.goos, t.goarch)
-		binary, err := build(t, DIST)
+		binary, err := build(t, DIST, true)
 		if err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ func Clean() error {
 	return sh.Run("go", "mod", "tidy")
 }
 
-func build(t target, dir string) (string, error) {
+func build(t target, dir string, crush bool) (string, error) {
 	envmap := envmap(os.Environ())
 	if t.goos != "" && t.goarch != "" {
 		envmap["GOOS"] = t.goos
@@ -122,9 +122,18 @@ func build(t target, dir string) (string, error) {
 	if t.goos == "windows" {
 		binary += ".exe"
 	}
-	err = sh.RunWith(envmap, "go", "build", "-o", binary, "-ldflags", LDFLAGS, GOFLAGS)
+
+	if crush {
+		LDFLAGS = LDFLAGS + "-s -w"
+	}
+
+	err = sh.RunWith(envmap, "go", "build", "-o", binary, "-ldflags", "'"+LDFLAGS+"'", GOFLAGS)
 	if err != nil {
 		return "", err
+	}
+
+	if crush {
+		sh.Run("upx", "-9", binary)
 	}
 
 	return binary, nil
