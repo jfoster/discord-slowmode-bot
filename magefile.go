@@ -95,6 +95,11 @@ func Test() error {
 	return sh.Run("go", "test", "./...")
 }
 
+func UpdateDeps() error {
+	logr.Info("Updating Deps...")
+	return sh.Run("go", "get", "-u")
+}
+
 func InstallDeps() error {
 	logr.Info("Installing Deps...")
 	return sh.Run("go", "mod", "download")
