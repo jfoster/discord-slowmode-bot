@@ -143,10 +143,7 @@ func runBot(token string) error {
 		return err
 	}
 
-	err = bot.On(event.MessageCreate, filter.HasBotMentionPrefix, onMessageCreate)
-	if err != nil {
-		return err
-	}
+	bot.On(event.MessageCreate, filter.HasBotMentionPrefix, onMessageCreate)
 
 	logr.Info("Discord session created successfully")
 	logr.Info("Starting bot")
@@ -157,7 +154,7 @@ func runBot(token string) error {
 	}
 	logr.Info("Connection took ", time.Since(start))
 
-	bot.AddPermission(disgord.ManageChannelsPermission)
+	bot.AddPermission(disgord.PermissionManageChannels)
 	url, err := bot.CreateBotURL()
 	if err != nil {
 		return err
@@ -181,7 +178,7 @@ func onMessageCreate(session disgord.Session, data *disgord.MessageCreate) {
 		logr.Error(err)
 	}
 
-	member, err := session.GetGuildMember(guild.ID, message.Author.ID)
+	member, err := session.GetMember(guild.ID, message.Author.ID)
 	if err != nil {
 		logr.Error(err)
 	}
@@ -191,7 +188,7 @@ func onMessageCreate(session disgord.Session, data *disgord.MessageCreate) {
 		role, err := guild.Role(roleID)
 		if err != nil {
 			logr.Error(err)
-		} else if (role.Permissions & (disgord.AdministratorPermission | disgord.ManageChannelsPermission)) != 0 {
+		} else if (role.Permissions & (disgord.PermissionAdministrator | disgord.PermissionManageChannels)) != 0 {
 			isPermitted = true
 			break
 		}
@@ -211,23 +208,15 @@ func onMessageCreate(session disgord.Session, data *disgord.MessageCreate) {
 
 	ratelimit := contents[1]
 	if ratelimit == "?" {
-		message.RespondString(session, fmt.Sprintf("slowmode is set to %s seconds", strconv.FormatUint(uint64(channel.RateLimitPerUser), 10)))
+		message.Reply(session, fmt.Sprintf("slowmode is set to %s seconds", strconv.FormatUint(uint64(channel.RateLimitPerUser), 10)))
 	} else {
 		u, err := strconv.ParseUint(ratelimit, 10, 0)
 		if err != nil {
 			logr.Error(err)
 			return
 		}
-		params := disgord.NewModifyTextChannelParams()
-		if err := params.SetRateLimitPerUser(uint(u)); err != nil {
-			logr.Error(err)
-			return
-		}
-		_, err = session.ModifyChannel(channel.ID, params)
-		if err != nil {
-			logr.Error(err)
-			return
-		}
-		message.RespondString(session, fmt.Sprintf("slowmode set to %s seconds", ratelimit))
+		session.UpdateChannel(channel.ID).SetRateLimitPerUser(uint(u)).Execute()
+
+		message.Reply(session, fmt.Sprintf("slowmode set to %s seconds", ratelimit))
 	}
 }
