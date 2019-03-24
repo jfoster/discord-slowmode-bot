@@ -133,16 +133,20 @@ func getToken(token string) (string, error) {
 func runBot(token string) error {
 	logr.Info("Creating Discord session")
 
-	bot := disgord.New(&disgord.Config{
+	bot, err := disgord.NewClient(&disgord.Config{
 		BotToken: token,
 		Logger:   logr,
 	})
+	if err != nil {
+		return err
+	}
 
 	filter, err := std.NewMsgFilter(bot)
 	if err != nil {
 		return err
 	}
 
+	bot.On(event.Ready, onReady)
 	bot.On(event.MessageCreate, filter.HasBotMentionPrefix, onMessageCreate)
 
 	logr.Info("Discord session created successfully")
@@ -165,22 +169,38 @@ func runBot(token string) error {
 	return nil
 }
 
-func onMessageCreate(session disgord.Session, data *disgord.MessageCreate) {
-	message := data.Message
+func onReady(session disgord.Session, evt *disgord.Ready) {
+	guilds, err := session.GetGuilds(&disgord.GetCurrentUserGuildsParams{
+		Limit: 999,
+	})
+	if err != nil {
+		logr.Error(err)
+		return
+	}
+	for i, guild := range guilds {
+		logr.Infof("%d: %s", i+1, guild.Name)
+	}
+}
+
+func onMessageCreate(session disgord.Session, evt *disgord.MessageCreate) {
+	message := evt.Message
 
 	channel, err := session.GetChannel(message.ChannelID)
 	if err != nil {
 		logr.Error(err)
+		return
 	}
 
 	guild, err := session.GetGuild(channel.GuildID)
 	if err != nil {
 		logr.Error(err)
+		return
 	}
 
 	member, err := session.GetMember(guild.ID, message.Author.ID)
 	if err != nil {
 		logr.Error(err)
+		return
 	}
 
 	isPermitted := false
