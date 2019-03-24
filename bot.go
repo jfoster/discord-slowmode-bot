@@ -163,7 +163,7 @@ func runBot(token string) error {
 	if err != nil {
 		return err
 	}
-	logr.Infof("Link to add the bot to your server: %s", url)
+	logr.Infof("Link to add the bot to your server:\n%s", url)
 
 	bot.DisconnectOnInterrupt()
 	return nil
