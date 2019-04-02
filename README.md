@@ -12,7 +12,7 @@ but still try and thwart spambots.
 
 Currently the GUI for setting slowmode is not particularly granular and does not allow for below 5 seconds.
 
-![](https://my.mixtape.moe/rcpisa.png)
+![](https://transfer.sh/16fLXx/Screenshot-2019-04-02-at-18.32.59.png)
 
 I then discovered it's possible to set slowmode to any integer between 0 and 120 seconds via the discord api, hence the creation of this simple bot.
 
@@ -22,5 +22,5 @@ I then discovered it's possible to set slowmode to any integer between 0 and 120
 1. Download the [latest release](https://github.com/jfoster/discord-set-slowmode-bot/releases/latest) for your given platform.
 1. Open a command line instance in the bot's directory and run ```./discord-set-slowmode-bot```, a warning should be printed ```client id is not specified, check cfg.yaml file``` and cfg.yaml will be created.
 1. Copy your bot token into cfg.yaml replacing ```<your-bot-token-here>```.
-1. Run ```./discord-set-slowmode-bot``` again, once connected, copy the discord invite link to your favourite browser and add the bot to a server. The bot should now be present in the desired server.  ![](https://my.mixtape.moe/puxkfv.png)
-1. In discord, from the channel you would like to set slowmode, type ```@SlowModeBot <ratelimit in seconds>``` e.g. ```@SlowModeBot#8558 1``` for 1 second.  ![](https://my.mixtape.moe/hxfrre.png)
+1. Run ```./discord-set-slowmode-bot``` again, once connected, copy the discord invite link to your favourite browser and add the bot to a server. The bot should now be present in the desired server.  ![](https://transfer.sh/RkNk3/Screenshot-2019-04-02-at-18.09.52.png)
+1. In discord, from the channel you would like to set slowmode, type ```@SlowModeBot <ratelimit in seconds>``` e.g. ```@SlowModeBot#8558 1``` for 1 second.  ![](https://transfer.sh/16g9X/Screenshot-2019-04-02-at-18.30.47.png)
