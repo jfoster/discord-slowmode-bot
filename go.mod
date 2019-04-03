@@ -1,8 +1,10 @@
 module github.com/jfoster/discord-set-slowmode-bot
 
 require (
+	github.com/Gurpartap/logrus-stack v0.0.0-20170710170904-89c00d8a28f4
 	github.com/andersfylling/disgord v0.10.1
 	github.com/banzaicloud/logrus-runtime-formatter v0.0.0-20180617171254-12df4a18567f
+	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/json-iterator/go v1.1.6 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.1.0 // indirect

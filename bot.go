@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Gurpartap/logrus-stack"
 	"github.com/andersfylling/disgord"
 	"github.com/andersfylling/disgord/event"
 	"github.com/andersfylling/disgord/std"
@@ -19,29 +20,34 @@ import (
 )
 
 const (
-	cfgfile         = "cfg.yaml"
-	cfgfiletemplate = "cfg.yaml.template"
+	cfgfilename     = "cfg.yaml"
+	cfgfiletemplate = `token: <your-bot-token-here>`
 )
 
 var (
-	cfg  = new(simpleyaml.Yaml)
 	logr = logrus.New()
 
-	version = "## filled by go build ##"
+	DEBUG   = false
+	VERSION = "## filled by go build ##"
 )
 
 func init() {
-	cfg, _ = getCfg()
-	debug, _ := cfg.Get("debug").Bool()
-	if debug {
+	formatter := &logrus.TextFormatter{
+		ForceColors:      true,
+		DisableTimestamp: true,
+	}
+	DEBUG, _ = strconv.ParseBool(os.Getenv("DEBUG"))
+	if DEBUG {
+		logr.AddHook(logrus_stack.StandardHook())
+		logr.SetLevel(logrus.DebugLevel)
 		logr.SetFormatter(&runtime.Formatter{
-			ChildFormatter: &logrus.TextFormatter{
-				ForceColors: true,
-			},
-			Line:    true,
-			Package: true,
-			File:    true,
+			ChildFormatter: formatter,
+			Line:           true,
+			Package:        true,
+			File:           true,
 		})
+	} else {
+		logr.SetFormatter(formatter)
 	}
 }
 
@@ -55,7 +61,7 @@ func cliApp() error {
 	app := cli.NewApp()
 	app.Name = "discord-set-slowmode-bot"
 	app.Usage = ""
-	app.Version = version
+	app.Version = VERSION
 	app.Authors = []cli.Author{
 		{
 			Name:  "Jacob Foster",
@@ -70,10 +76,24 @@ func cliApp() error {
 		},
 	}
 	app.Action = func(c *cli.Context) error {
-		token, err := getToken(c.String("token"))
-		if err != nil {
-			return err
+		token := c.String("token")
+		// get token from cfg if not specified with flag
+		if token == "" {
+			cfg, err := getCfg()
+			if err != nil {
+				return err
+			}
+
+			token, err = cfg.Get("token").String()
+			if err != nil {
+				return err
+			}
 		}
+
+		if token == "" || token == "<your-bot-token-here>" {
+			return errors.New("client token is not specified, check " + cfgfilename + " file or specify with -t flag")
+		}
+
 		if err := runBot(token); err != nil {
 			return err
 		}
@@ -87,22 +107,20 @@ func cliApp() error {
 }
 
 func getCfg() (*simpleyaml.Yaml, error) {
-	yaml := new(simpleyaml.Yaml)
+	yaml, err := simpleyaml.NewYaml([]byte(cfgfiletemplate))
+	if err != nil {
+		return yaml, err
+	}
 
-	if _, err := os.Stat(cfgfile); os.IsNotExist(err) {
-		input, err := ioutil.ReadFile(cfgfiletemplate)
+	if _, err := os.Stat(cfgfilename); os.IsNotExist(err) {
+		logr.Warnf("%s file does not exist, creating %s file from template...", cfgfilename, cfgfilename)
+		err = ioutil.WriteFile(cfgfilename, []byte(cfgfiletemplate), 0644)
 		if err != nil {
 			return yaml, err
-		}
-		err = ioutil.WriteFile(cfgfile, input, 0644)
-		if err != nil {
-			return yaml, err
-		} else {
-			os.Remove(cfgfiletemplate)
 		}
 	}
 
-	file, err := ioutil.ReadFile(cfgfile)
+	file, err := ioutil.ReadFile(cfgfilename)
 	if err != nil {
 		return yaml, err
 	}
@@ -114,29 +132,17 @@ func getCfg() (*simpleyaml.Yaml, error) {
 	return yaml, nil
 }
 
-func getToken(token string) (string, error) {
-	if token != "" {
-		return token, nil
-	}
-
-	t, err := cfg.Get("token").String()
-	if err != nil {
-		return "", err
-	}
-
-	if t == "" || t == "<your-bot-token-here>" {
-		return "", errors.New("client id is not specified, check " + cfgfile + " file")
-	}
-	return t, nil
-}
-
 func runBot(token string) error {
 	logr.Info("Creating Discord session")
 
-	bot, err := disgord.NewClient(&disgord.Config{
+	config := &disgord.Config{
 		BotToken: token,
-		Logger:   logr,
-	})
+	}
+	if DEBUG {
+		config.Logger = logr
+	}
+
+	bot, err := disgord.NewClient(config)
 	if err != nil {
 		return err
 	}
@@ -145,24 +151,21 @@ func runBot(token string) error {
 	if err != nil {
 		return err
 	}
-
-	bot.On(event.Ready, onReady)
 	bot.On(event.MessageCreate, filter.HasBotMentionPrefix, onMessageCreate)
-
-	logr.Info("Discord session created successfully")
-	logr.Info("Starting bot")
-
-	start := time.Now()
-	if err = bot.Connect(); err != nil {
-		return err
-	}
-	logr.Info("Connection took ", time.Since(start))
+	bot.On(event.Ready, onReady)
 
 	bot.AddPermission(disgord.PermissionManageChannels)
 	url, err := bot.CreateBotURL()
 	if err != nil {
 		return err
 	}
+
+	logr.Info("Starting bot connection")
+	start := time.Now()
+	if err = bot.Connect(); err != nil {
+		return err
+	}
+	logr.Info("Connection took ", time.Since(start))
 	logr.Infof("Link to add the bot to your server:\n%s", url)
 
 	bot.DisconnectOnInterrupt()
@@ -177,9 +180,11 @@ func onReady(session disgord.Session, evt *disgord.Ready) {
 		logr.Error(err)
 		return
 	}
+	guildString := "Connected guilds:\n"
 	for i, guild := range guilds {
-		logr.Infof("%d: %s", i+1, guild.Name)
+		guildString += fmt.Sprintf("%d: %s (%s)\n", i+1, guild.Name, guild.ID)
 	}
+	logr.Info(guildString)
 }
 
 func onMessageCreate(session disgord.Session, evt *disgord.MessageCreate) {
