@@ -1,10 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -15,7 +16,7 @@ import (
 	"github.com/andersfylling/disgord/std"
 	"github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/sirupsen/logrus"
-	"github.com/smallfish/simpleyaml"
+	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 )
 
@@ -25,6 +26,8 @@ const (
 )
 
 var (
+	err error
+
 	logr = logrus.New()
 
 	DEBUG   = false
@@ -84,14 +87,11 @@ func cliApp() error {
 				return err
 			}
 
-			token, err = cfg.Get("token").String()
-			if err != nil {
-				return err
-			}
+			token = cfg.GetString("token")
 		}
 
 		if token == "" || token == "<your-bot-token-here>" {
-			return errors.New("client token is not specified, check " + cfgfilename + " file or specify with -t flag")
+			return errors.New(fmt.Sprintf("no bot token specified, edit %s or specify with --token flag", cfgfilename))
 		}
 
 		if err := runBot(token); err != nil {
@@ -106,30 +106,64 @@ func cliApp() error {
 	return nil
 }
 
-func getCfg() (*simpleyaml.Yaml, error) {
-	yaml, err := simpleyaml.NewYaml([]byte(cfgfiletemplate))
+func getCfg() (*viper.Viper, error) {
+	cfg := viper.New()
+
+	cfgfilepath, err := getCfgFilePath()
 	if err != nil {
-		return yaml, err
+		return cfg, err
 	}
 
-	if _, err := os.Stat(cfgfilename); os.IsNotExist(err) {
-		logr.Warnf("%s file does not exist, creating %s file from template...", cfgfilename, cfgfilename)
-		err = ioutil.WriteFile(cfgfilename, []byte(cfgfiletemplate), 0644)
-		if err != nil {
-			return yaml, err
+	parts := strings.Split(cfgfilename, ".")
+	cfg.SetConfigName(parts[0])
+	cfg.SetConfigType(parts[1])
+
+	cfg.AddConfigPath(".")
+	cfg.AddConfigPath(cfgfilepath)
+
+	if err := cfg.ReadInConfig(); err != nil {
+		if _, notFound := err.(viper.ConfigFileNotFoundError); notFound {
+			// create dir
+			err = os.MkdirAll(cfgfilepath, os.ModePerm)
+			if err != nil {
+				return cfg, err
+			}
+
+			// create file
+			file, err := os.Create(filepath.Join(cfgfilepath, filepath.Base("cfg.yaml")))
+			if err != nil {
+				return cfg, err
+			}
+			if err = file.Close(); err != nil {
+				return cfg, err
+			}
+
+			// read cfg template
+			err = cfg.ReadConfig(bytes.NewBuffer([]byte(cfgfiletemplate)))
+			if err != nil {
+				return cfg, err
+			}
+
+			logr.Infof("%s created at %s, please copy your bot token into this file", cfgfilename, cfgfilepath)
+
+			// write cfg template
+			err = cfg.WriteConfig()
+			if err != nil {
+				return cfg, err
+			}
 		}
+		return cfg, err
 	}
 
-	file, err := ioutil.ReadFile(cfgfilename)
-	if err != nil {
-		return yaml, err
-	}
+	return cfg, nil
+}
 
-	yaml, err = simpleyaml.NewYaml(file)
+func getCfgFilePath() (string, error) {
+	home, err := os.UserHomeDir()
 	if err != nil {
-		return yaml, err
+		return "", err
 	}
-	return yaml, nil
+	return filepath.Join(home, ".config", "discordsetslowmodebot"), nil
 }
 
 func runBot(token string) error {
