@@ -24,10 +24,6 @@ const (
 var (
 	Default = Run
 
-	VERSION string
-	LDFLAGS string
-	GOFLAGS string
-
 	err  error
 	logr = logrus.New()
 )
@@ -38,16 +34,13 @@ type target struct {
 }
 
 func init() {
-	VERSION, _ = sh.Output("git", "describe", "--tags", "--always", "--dirty")
-	LDFLAGS = fmt.Sprintf("-X main.version=%s", VERSION)
-
-	if _, err := os.Stat("vendor"); !os.IsNotExist(err) {
-		GOFLAGS = "-mod=vendor"
-	}
+	logr.SetFormatter(&logrus.TextFormatter{
+		DisableTimestamp: true,
+	})
 }
 
 func Run() error {
-	return sh.Run("go", "run", "-ldflags", LDFLAGS, GOFLAGS, ".")
+	return sh.Run("go", "run", getGOFLAGS(), ".")
 }
 
 func Build() error {
@@ -59,6 +52,7 @@ func Build() error {
 
 func Release() error {
 	mg.Deps(Clean)
+	mg.Deps(DepsTidy)
 
 	targets := []target{
 		{"darwin", "amd64"},
@@ -84,7 +78,7 @@ func Release() error {
 		rOS := strings.NewReplacer("darwin", "macOS")
 		rARCH := strings.NewReplacer("386", "32bit", "amd64", "64bit")
 
-		archiveName := fmt.Sprintf("%s-%s-%s-%s.zip", BINARY, VERSION, rOS.Replace(t.goos), rARCH.Replace(t.goarch))
+		archiveName := fmt.Sprintf("%s-%s-%s-%s.zip", BINARY, getVersion(), rOS.Replace(t.goos), rARCH.Replace(t.goarch))
 		zipFiles(filepath.Join(DIST, archiveName), files)
 		os.Remove(binary)
 	}
@@ -95,26 +89,34 @@ func Test() error {
 	return sh.Run("go", "test", "./...")
 }
 
-func UpdateDeps() error {
-	logr.Info("Updating Deps...")
-	return sh.Run("go", "get", "-u")
+func Clean() error {
+	logr.Info("Cleaning...")
+	err := os.RemoveAll(BINARY)
+	err = os.RemoveAll(DIST)
+	return err
 }
 
-func InstallDeps() error {
+func DepsInstall() error {
 	logr.Info("Installing Deps...")
 	return sh.Run("go", "mod", "download")
 }
 
-func VendorDeps() error {
+func DepsTidy() error {
+	logr.Info("Tidying Deps...")
+	return sh.Run("go", "mod", "tidy")
+}
+
+func DepsUpdate() error {
+	logr.Info("Updating Deps...")
+	return sh.Run("go", "get", "-u")
+}
+
+func DepsVendor() error {
 	logr.Info("Vendoring Deps...")
 	return sh.Run("go", "mod", "vendor")
 }
 
-func Clean() error {
-	os.RemoveAll(BINARY)
-	os.RemoveAll(DIST)
-	return sh.Run("go", "mod", "tidy")
-}
+// helper functions
 
 func build(t target, dir string, crush bool) (string, error) {
 	envmap := envmap(os.Environ())
@@ -128,11 +130,7 @@ func build(t target, dir string, crush bool) (string, error) {
 		binary += ".exe"
 	}
 
-	if crush {
-		LDFLAGS = LDFLAGS + "-s -w"
-	}
-
-	err = sh.RunWith(envmap, "go", "build", "-o", binary, "-ldflags", "'"+LDFLAGS+"'", GOFLAGS)
+	err = sh.RunWith(envmap, "go", "build", "-o", binary, "-ldflags", getLDFLAGS(crush), getGOFLAGS())
 	if err != nil {
 		return "", err
 	}
@@ -142,6 +140,29 @@ func build(t target, dir string, crush bool) (string, error) {
 	}
 
 	return binary, nil
+}
+
+func getGOFLAGS() string {
+	if _, err := os.Stat("vendor"); !os.IsNotExist(err) {
+		return "-mod=vendor"
+	}
+	return ""
+}
+
+func getLDFLAGS(crush bool) string {
+	version := fmt.Sprintf("-X main.VERSION=%s", getVersion())
+
+	scrush := ""
+	if crush {
+		scrush += "-s -w"
+	}
+
+	return fmt.Sprintln(version, scrush)
+}
+
+func getVersion() string {
+	out, _ := sh.Output("git", "describe", "--tags", "--always", "--dirty")
+	return out
 }
 
 func envmap(env []string) map[string]string {
