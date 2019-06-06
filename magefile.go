@@ -6,14 +6,14 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 
 	"github.com/magefile/mage/mg"
-	"github.com/magefile/mage/sh"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -21,28 +21,7 @@ const (
 	DIST   = "release"
 )
 
-var (
-	Default = Run
-
-	err  error
-	logr = logrus.New()
-)
-
-type target struct {
-	goos   string
-	goarch string
-}
-
-func init() {
-	logr.SetFormatter(&logrus.TextFormatter{
-		DisableTimestamp: true,
-	})
-}
-
-func Run() error {
-	return sh.Run("go", "run", getGOFLAGS(), ".")
-}
-
+// create binary for current platform
 func Build() error {
 	mg.Deps(Clean)
 
@@ -52,7 +31,6 @@ func Build() error {
 
 func Release() error {
 	mg.Deps(Clean)
-	mg.Deps(DepsTidy)
 
 	targets := []target{
 		{"darwin", "amd64"},
@@ -62,107 +40,116 @@ func Release() error {
 		{"windows", "386"},
 	}
 
+	version := version()
+	hubargs := []string{"release", "create", version, "-m", version}
+
 	for _, t := range targets {
-		logr.Infof("Building for OS %s and architecture %s\n", t.goos, t.goarch)
-		binary, err := build(t, DIST, true)
-		if err != nil {
-			return err
-		}
-		files := []string{
-			binary,
-			"README.md",
-			"cfg.yaml.template",
-			"LICENSE.txt",
-		}
+		fmt.Printf("Building %s-%s\n", t.goos, t.goarch)
 
 		rOS := strings.NewReplacer("darwin", "macOS")
 		rARCH := strings.NewReplacer("386", "32bit", "amd64", "64bit")
 
-		archiveName := fmt.Sprintf("%s-%s-%s-%s.zip", BINARY, getVersion(), rOS.Replace(t.goos), rARCH.Replace(t.goarch))
+		archiveName := fmt.Sprintf("%s-%s-%s-%s.zip", BINARY, version, rOS.Replace(t.goos), rARCH.Replace(t.goarch))
+
+		hubargs = append(hubargs, "-a", filepath.Join(DIST, archiveName))
+
+		binary, err := build(t, DIST, true)
+		if err != nil {
+			return err
+		}
+
+		files := []string{
+			binary,
+			"README.md",
+			"LICENSE.txt",
+		}
+
 		zipFiles(filepath.Join(DIST, archiveName), files)
+
 		os.Remove(binary)
 	}
+
+	fmt.Printf("Creating GitHub release for version %s\n", version)
+	err := exec.Command("hub", hubargs...).Run()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func Test() error {
-	return sh.Run("go", "test", "./...")
+	return exec.Command("go", "test", "./...").Run()
 }
 
+// cleanup binaries and dist directory
 func Clean() error {
-	logr.Info("Cleaning...")
+	log.Println("Cleaning...")
 	err := os.RemoveAll(BINARY)
+	if err != nil {
+		return err
+	}
 	err = os.RemoveAll(DIST)
-	return err
-}
-
-func DepsInstall() error {
-	logr.Info("Installing Deps...")
-	return sh.Run("go", "mod", "download")
-}
-
-func DepsTidy() error {
-	logr.Info("Tidying Deps...")
-	return sh.Run("go", "mod", "tidy")
-}
-
-func DepsUpdate() error {
-	logr.Info("Updating Deps...")
-	return sh.Run("go", "get", "-u")
-}
-
-func DepsVendor() error {
-	logr.Info("Vendoring Deps...")
-	return sh.Run("go", "mod", "vendor")
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // helper functions
 
+type target struct {
+	goos   string
+	goarch string
+}
+
 func build(t target, dir string, crush bool) (string, error) {
-	envmap := envmap(os.Environ())
-	if t.goos != "" && t.goarch != "" {
-		envmap["GOOS"] = t.goos
-		envmap["GOARCH"] = t.goarch
-	}
+	os.Setenv("GOOS", t.goos)
+	os.Setenv("GOARCH", t.goarch)
 
 	binary := filepath.Join(dir, BINARY)
 	if t.goos == "windows" {
 		binary += ".exe"
 	}
 
-	err = sh.RunWith(envmap, "go", "build", "-o", binary, "-ldflags", getLDFLAGS(crush), getGOFLAGS())
+	err := exec.Command("go", "build", "-o", binary, "-ldflags", ldflags(crush), goflags()).Run()
 	if err != nil {
-		return "", err
+		log.Fatalln(err)
 	}
 
 	if crush {
-		sh.Run("upx", "-9", binary)
+		err := exec.Command("upx", "-9", binary).Run()
+		if err != nil {
+			log.Println(err)
+		}
 	}
 
 	return binary, nil
 }
 
-func getGOFLAGS() string {
+func goflags() string {
 	if _, err := os.Stat("vendor"); !os.IsNotExist(err) {
 		return "-mod=vendor"
 	}
 	return ""
 }
 
-func getLDFLAGS(crush bool) string {
-	version := fmt.Sprintf("-X main.VERSION=%s", getVersion())
-
+func ldflags(crush bool) string {
+	version := fmt.Sprintf("-X main.VERSION=%s", version())
 	scrush := ""
 	if crush {
 		scrush += "-s -w"
 	}
-
 	return fmt.Sprintln(version, scrush)
 }
 
-func getVersion() string {
-	out, _ := sh.Output("git", "describe", "--tags", "--always", "--dirty")
-	return out
+func version() string {
+	out, err := exec.Command("git", "describe", "--tags", "--always", "--dirty").Output()
+	if err != nil {
+		log.Print(err)
+		return "" // fallback
+	}
+	return strings.TrimRight(string(out), "\r\n")
 }
 
 func envmap(env []string) map[string]string {
