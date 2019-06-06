@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Gurpartap/logrus-stack"
+	stack "github.com/Gurpartap/logrus-stack"
 	"github.com/andersfylling/disgord"
 	"github.com/andersfylling/disgord/event"
 	"github.com/andersfylling/disgord/std"
-	"github.com/banzaicloud/logrus-runtime-formatter"
+	runtime "github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/sirupsen/logrus"
 	"github.com/smallfish/simpleyaml"
 	"github.com/urfave/cli"
@@ -25,20 +25,22 @@ const (
 )
 
 var (
-	logr = logrus.New()
-
-	DEBUG   = false
-	VERSION = "## filled by go build ##"
+	debug   = false
+	logr    = logrus.New()
+	version = "# filled by go build #"
 )
 
-func init() {
+func main() {
 	formatter := &logrus.TextFormatter{
 		ForceColors:      true,
 		DisableTimestamp: true,
 	}
-	DEBUG, _ = strconv.ParseBool(os.Getenv("DEBUG"))
-	if DEBUG {
-		logr.AddHook(logrus_stack.StandardHook())
+	debug, err := strconv.ParseBool(os.Getenv("DEBUG"))
+	if err != nil {
+		logr.Error(err)
+	}
+	if debug {
+		logr.AddHook(stack.StandardHook())
 		logr.SetLevel(logrus.DebugLevel)
 		logr.SetFormatter(&runtime.Formatter{
 			ChildFormatter: formatter,
@@ -49,9 +51,7 @@ func init() {
 	} else {
 		logr.SetFormatter(formatter)
 	}
-}
 
-func main() {
 	if err := cliApp(); err != nil {
 		logr.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func cliApp() error {
 	app := cli.NewApp()
 	app.Name = "discord-set-slowmode-bot"
 	app.Usage = ""
-	app.Version = VERSION
+	app.Version = version
 	app.Authors = []cli.Author{
 		{
 			Name:  "Jacob Foster",
@@ -138,7 +138,7 @@ func runBot(token string) error {
 	config := &disgord.Config{
 		BotToken: token,
 	}
-	if DEBUG {
+	if debug {
 		config.Logger = logr
 	}
 
