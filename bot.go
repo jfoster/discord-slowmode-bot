@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -91,7 +90,7 @@ func cliApp() error {
 		}
 
 		if token == "" || token == "<your-bot-token-here>" {
-			return errors.New("client token is not specified, check " + cfgfilename + " file or specify with -t flag")
+			return fmt.Errorf("client token is not specified, check %s file or specify with -t flag", cfgfilename)
 		}
 
 		if err := runBot(token); err != nil {
