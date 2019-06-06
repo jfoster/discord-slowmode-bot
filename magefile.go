@@ -40,7 +40,7 @@ func Release() error {
 		{"windows", "386"},
 	}
 
-	version := version()
+	version := getVersion()
 	hubargs := []string{"release", "create", version, "-m", version}
 
 	for _, t := range targets {
@@ -135,15 +135,15 @@ func goflags() string {
 }
 
 func ldflags(crush bool) string {
-	version := fmt.Sprintf("-X main.VERSION=%s", version())
+	v := fmt.Sprintf("-X main.VERSION=%s", getVersion())
 	scrush := ""
 	if crush {
 		scrush += "-s -w"
 	}
-	return fmt.Sprintln(version, scrush)
+	return fmt.Sprintln(v, scrush)
 }
 
-func version() string {
+func getVersion() string {
 	out, err := exec.Command("git", "describe", "--tags", "--always", "--dirty").Output()
 	if err != nil {
 		log.Print(err)
