@@ -1,6 +1,6 @@
 # discord-set-slowmode-bot
 
-Simple discord bot to set channel slowmode to any integer between 0 and 120 seconds.
+Simple discord bot to set channel slowmode to any value between 1 second and 6 hours.
 
 ## Why?
 
@@ -14,7 +14,7 @@ Currently the GUI for setting slowmode is not particularly granular and does not
 
 ![](https://i.imgur.com/5ki1rDd.png)
 
-I then discovered it's possible to set slowmode to any integer between 0 and 120 seconds via the discord api, hence the creation of this simple bot.
+I then discovered it's possible to set slowmode to any integer between 0 to 21600 seconds via the discord api, hence the creation of this simple bot.
 
 ## How?
 
