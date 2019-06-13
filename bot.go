@@ -232,15 +232,28 @@ func onMessageCreate(session disgord.Session, evt *disgord.MessageCreate) {
 
 	ratelimit := contents[1]
 	if ratelimit == "?" {
-		message.Reply(session, fmt.Sprintf("slowmode is set to %s seconds", strconv.FormatUint(uint64(channel.RateLimitPerUser), 10)))
+		duration := time.Duration(channel.RateLimitPerUser)
+		message.Reply(session, fmt.Sprintf("slowmode is set to %s", duration.String()))
 	} else {
-		u, err := strconv.ParseUint(ratelimit, 10, 0)
+		duration, err := time.ParseDuration(ratelimit)
 		if err != nil {
 			logr.Error(err)
 			return
 		}
-		session.UpdateChannel(channel.ID).SetRateLimitPerUser(uint(u)).Execute()
 
-		message.Reply(session, fmt.Sprintf("slowmode set to %s seconds", ratelimit))
+		secs := uint(duration.Seconds())
+		if secs < 0 || secs > 21600 {
+			logr.Error(fmt.Errorf("Specified duration is not between 0-21600 seconds"))
+			return
+		}
+
+		ucb := session.UpdateChannel(channel.ID).SetRateLimitPerUser(secs)
+		_, err = ucb.Execute()
+		if err != nil {
+			logr.Error(err)
+			return
+		}
+
+		message.Reply(session, fmt.Sprintf("slowmode set to %s", duration.String()))
 	}
 }
