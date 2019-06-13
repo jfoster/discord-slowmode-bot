@@ -232,7 +232,7 @@ func onMessageCreate(session disgord.Session, evt *disgord.MessageCreate) {
 
 	ratelimit := contents[1]
 	if ratelimit == "?" {
-		duration := time.Duration(channel.RateLimitPerUser)
+		duration := time.Duration(channel.RateLimitPerUser * uint(time.Second))
 		message.Reply(session, fmt.Sprintf("slowmode is set to %s", duration.String()))
 	} else {
 		duration, err := time.ParseDuration(ratelimit)
