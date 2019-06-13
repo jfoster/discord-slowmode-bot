@@ -34,10 +34,7 @@ func main() {
 		ForceColors:      true,
 		DisableTimestamp: true,
 	}
-	debug, err := strconv.ParseBool(os.Getenv("DEBUG"))
-	if err != nil {
-		logr.Error(err)
-	}
+	debug, _ := strconv.ParseBool(os.Getenv("DEBUG"))
 	if debug {
 		logr.AddHook(stack.StandardHook())
 		logr.SetLevel(logrus.DebugLevel)
