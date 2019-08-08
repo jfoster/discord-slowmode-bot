@@ -143,28 +143,26 @@ func runBot(token string) error {
 		return err
 	}
 
+	bot.AddPermission(disgord.PermissionManageChannels)
+
+	bot.On(event.Ready, onReady)
+
 	filter, err := std.NewMsgFilter(bot)
 	if err != nil {
 		return err
 	}
 	bot.On(event.MessageCreate, filter.HasBotMentionPrefix, onMessageCreate)
-	bot.On(event.Ready, onReady)
 
-	bot.AddPermission(disgord.PermissionManageChannels)
-	url, err := bot.CreateBotURL()
-	if err != nil {
-		return err
-	}
-
-	logr.Info("Starting bot connection")
+	logr.Info("Connecting")
 	start := time.Now()
 	if err = bot.Connect(); err != nil {
 		return err
 	}
 	logr.Info("Connection took ", time.Since(start))
-	logr.Infof("Link to add the bot to your server:\n%s", url)
 
+	logr.Info("Press Ctrl+C to exit")
 	bot.DisconnectOnInterrupt()
+
 	return nil
 }
 
@@ -174,13 +172,21 @@ func onReady(session disgord.Session, evt *disgord.Ready) {
 	})
 	if err != nil {
 		logr.Error(err)
-		return
+	} else {
+		guildString := "Connected guilds:\n"
+		for i, guild := range guilds {
+			guildString += fmt.Sprintf("%d: %s (%s)\n", i+1, guild.Name, guild.ID)
+		}
+		logr.Info(guildString)
 	}
-	guildString := "Connected guilds:\n"
-	for i, guild := range guilds {
-		guildString += fmt.Sprintf("%d: %s (%s)\n", i+1, guild.Name, guild.ID)
+
+	user, err := session.GetCurrentUser()
+	if err != nil {
+		logr.Error(err)
+	} else {
+		url := fmt.Sprintf("https://discordapp.com/oauth2/authorize?scope=bot&client_id=%s&permissions=%d", user.ID, session.GetPermissions())
+		logr.Infof("Link to add bot to your guild:\n%s", url)
 	}
-	logr.Info(guildString)
 }
 
 func onMessageCreate(session disgord.Session, evt *disgord.MessageCreate) {
