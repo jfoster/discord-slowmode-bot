@@ -10,7 +10,6 @@ require (
 	github.com/json-iterator/go v1.1.7 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
-	github.com/magefile/mage v1.8.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smallfish/simpleyaml v0.0.0-20170911015856-a32031077861
 	github.com/urfave/cli v1.21.0
