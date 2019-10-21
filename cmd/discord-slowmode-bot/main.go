@@ -4,18 +4,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
-	stack "github.com/Gurpartap/logrus-stack"
 	"github.com/andersfylling/disgord"
 	"github.com/andersfylling/disgord/event"
 	"github.com/andersfylling/disgord/std"
-	runtime "github.com/banzaicloud/logrus-runtime-formatter"
-	"github.com/sirupsen/logrus"
 	"github.com/smallfish/simpleyaml"
 	"github.com/urfave/cli"
+
+	"github.com/jfoster/discord-slowmode-bot/internal/log"
 )
 
 const (
@@ -24,30 +22,11 @@ const (
 )
 
 var (
-	debug   = false
-	logr    = logrus.New()
+	logr    = log.New()
 	version = "# filled by go build #"
 )
 
 func main() {
-	formatter := &logrus.TextFormatter{
-		ForceColors:      true,
-		DisableTimestamp: true,
-	}
-	debug, _ := strconv.ParseBool(os.Getenv("DEBUG"))
-	if debug {
-		logr.AddHook(stack.StandardHook())
-		logr.SetLevel(logrus.DebugLevel)
-		logr.SetFormatter(&runtime.Formatter{
-			ChildFormatter: formatter,
-			Line:           true,
-			Package:        true,
-			File:           true,
-		})
-	} else {
-		logr.SetFormatter(formatter)
-	}
-
 	if err := cliApp(); err != nil {
 		logr.Fatal(err)
 	}
@@ -134,8 +113,8 @@ func runBot(token string) error {
 	config := &disgord.Config{
 		BotToken: token,
 	}
-	if debug {
-		config.Logger = logr
+	if logr.Debug {
+		config.Logger = logr.Logger
 	}
 
 	bot, err := disgord.NewClient(config)
