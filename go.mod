@@ -1,4 +1,6 @@
-module github.com/jfoster/discord-set-slowmode-bot
+module github.com/jfoster/discord-slowmode-bot
+
+go 1.13
 
 require (
 	github.com/Gurpartap/logrus-stack v0.0.0-20170710170904-89c00d8a28f4
