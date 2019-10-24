@@ -23,6 +23,6 @@
 # End of https://www.gitignore.io/api/go
 
 cfg.yaml
-discord-set-slowmode-bot*
-discord-set-slowmode-bot*.zip
+discord-slowmode-bot*
+discord-slowmode-bot*.zip
 .idea
