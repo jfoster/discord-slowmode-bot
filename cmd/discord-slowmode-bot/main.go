@@ -34,7 +34,7 @@ func main() {
 
 func cliApp() error {
 	app := cli.NewApp()
-	app.Name = "discord-set-slowmode-bot"
+	app.Name = "discord-slowmode-bot"
 	app.Usage = ""
 	app.Version = version
 	app.Authors = []cli.Author{
