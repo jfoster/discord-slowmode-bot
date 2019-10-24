@@ -112,6 +112,7 @@ func runBot(token string) error {
 
 	config := &disgord.Config{
 		BotToken: token,
+		ProjectName: "jfoster/discord-slowmode-bot",
 	}
 	if logr.Debug {
 		config.Logger = logr.Logger
