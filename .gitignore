@@ -26,3 +26,4 @@ cfg.yaml
 discord-slowmode-bot*
 discord-slowmode-bot*.zip
 .idea
+dist/
