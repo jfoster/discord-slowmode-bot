@@ -112,8 +112,13 @@ func runBot(token string) error {
 	config := disgord.Config{
 		BotToken:    token,
 		ProjectName: "jfoster/discord-slowmode-bot",
+		CacheConfig: &disgord.CacheConfig{
+			DisableUserCaching:       true,
+			DisableVoiceStateCaching: true,
+			DisableChannelCaching:    true,
+		},
 	}
-	if logr.Debug {
+	if logr.IsDebug {
 		config.Logger = logr.Logger
 	}
 
@@ -131,24 +136,23 @@ func runBot(token string) error {
 	bot.On(disgord.EvtMessageCreate, filter.HasBotMentionPrefix, onMessageCreate)
 
 	start := time.Now()
+
 	bot.Ready(func() {
-		guilds, err := bot.GetGuilds(nil)
-		if err != nil {
-			logr.Error(err)
-		}
-
-		logr.Infof("Connected to %d guilds in %.2f seconds", len(guilds), time.Since(start).Seconds())
-
 		if url, err := bot.InviteURL(); err != nil {
 			logr.Error(err)
 		} else {
 			logr.Infof("Link to add bot to your guild:\n%s", url)
 		}
-
-		logr.Info("Press Ctrl+C to exit")
 	})
 
-	logr.Info("Connecting")
+	bot.GuildsReady(func() {
+		guilds, err := bot.GetGuilds(nil)
+		if err != nil {
+			logr.Error(err)
+		}
+		logr.Infof("Connected to %d guilds in %.2f seconds", len(guilds), time.Since(start).Seconds())
+	})
+
 	if err = bot.Connect(); err != nil {
 		return err
 	}
