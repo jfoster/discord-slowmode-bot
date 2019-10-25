@@ -10,8 +10,8 @@ import (
 )
 
 type Logger struct {
-	Debug bool
 	*logrus.Logger
+	IsDebug bool
 }
 
 func New() (l *Logger) {
@@ -22,7 +22,7 @@ func New() (l *Logger) {
 
 	l = &Logger{Logger: logrus.New()}
 
-	if l.Debug, _ = strconv.ParseBool(os.Getenv("DEBUG")); !l.Debug {
+	if l.IsDebug, _ = strconv.ParseBool(os.Getenv("DEBUG")); !l.IsDebug {
 		logrus.SetFormatter(txtformatter)
 	} else {
 		l.AddHook(stack.StandardHook())
