@@ -117,6 +117,22 @@ func runBot(token string) error {
 			DisableVoiceStateCaching: true,
 			DisableChannelCaching:    true,
 		},
+		// ignore all Discord events, except the following
+		// this reduces CPU resource use and locking
+		IgnoreEvents: disgord.AllEvents(
+			// minimum requirement
+			disgord.EvtMessageCreate,
+			disgord.EvtGuildCreate,
+			disgord.EvtReady,
+
+			// some extra, just to be on the safe side
+			disgord.EvtGuildDelete,
+			disgord.EvtUserUpdate, // bot user
+			// permissions - ready for future disgord improvements
+			disgord.EvtChannelCreate,
+			disgord.EvtChannelUpdate,
+			disgord.EvtGuildUpdate,
+		),
 	}
 	if logr.IsDebug {
 		config.Logger = logr.Logger
