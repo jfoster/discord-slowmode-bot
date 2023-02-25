@@ -12,6 +12,6 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smallfish/simpleyaml v0.0.0-20170911015856-a32031077861
 	github.com/urfave/cli v1.22.1
-	golang.org/x/sys v0.0.0-20191025090151-53bf42e6b339 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	gopkg.in/yaml.v2 v2.2.4 // indirect
 )
